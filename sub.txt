@@ -1,0 +1,135 @@
+{
+  "log": {
+    "disabled": false,
+    "level": "info",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "cloudflare-dns",
+        "address": "1.1.1.1",
+        "detour": "Proxy"
+      },
+      {
+        "tag": "local-dns",
+        "address": "8.8.8.8",
+        "detour": "direct"
+      }
+    ],
+    "rules": [
+      {
+        "outbound": "any",
+        "server": "local-dns"
+      }
+    ],
+    "final": "cloudflare-dns",
+    "strategy": "ipv4_only"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "tun0",
+      "inet4_address": "172.19.0.1/30",
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system",
+      "sniff": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "selector",
+      "tag": "Proxy",
+      "outbounds": [
+        "Auto-Best-Node",
+        "Node-1 (ipf3)",
+        "Node-2 (ipf2-TLS)",
+        "Node-3 (ipf4)"
+      ]
+    },
+    {
+      "type": "urltest",
+      "tag": "Auto-Best-Node",
+      "outbounds": [
+        "Node-1 (ipf3)",
+        "Node-2 (ipf2-TLS)",
+        "Node-3 (ipf4)"
+      ],
+      "url": "http://cp.cloudflare.com/",
+      "interval": "3m",
+      "tolerance": 50
+    },
+    {
+      "type": "vless",
+      "tag": "Node-1 (ipf3)",
+      "server": "ipf3.justrouting.sbs",
+      "server_port": 80,
+      "uuid": "769cdba7-4524-423c-80fc-d2307e3a3f99",
+      "packet_encoding": "xudp",
+      "transport": {
+        "type": "httpupgrade",
+        "host": "when-day-is-dark.global.ssl.fastly.net",
+        "path": "/dl?ed=2560"
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "Node-2 (ipf2-TLS)",
+      "server": "ipf2.justrouting.sbs",
+      "server_port": 443,
+      "uuid": "769cdba7-4524-423c-80fc-d2307e3a3f99",
+      "packet_encoding": "xudp",
+      "tls": {
+        "enabled": true,
+        "server_name": "python.org",
+        "insecure": true,
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "transport": {
+        "type": "httpupgrade",
+        "host": "when-day-is-dark.global.ssl.fastly.net",
+        "path": "/dl?ed=2560"
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "Node-3 (ipf4)",
+      "server": "ipf4.justrouting.sbs",
+      "server_port": 80,
+      "uuid": "769cdba7-4524-423c-80fc-d2307e3a3f99",
+      "packet_encoding": "xudp",
+      "transport": {
+        "type": "httpupgrade",
+        "host": "when-day-is-dark.global.ssl.fastly.net",
+        "path": "/dl?ed=2560"
+      }
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "dns",
+      "tag": "dns-out"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns-out"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      }
+    ],
+    "final": "Proxy",
+    "auto_detect_interface": true
+  }
+}
